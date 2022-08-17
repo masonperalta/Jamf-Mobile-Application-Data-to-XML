@@ -3,8 +3,6 @@
 
 ## Purpose
 The purpose of this script is to sync mobile device applications via the Jamf Classic API and append various data elements to a primary XML file that can be uploaded to a BI tool.
-### Datapoints Collected for Mobile Device Applications:
-Serial number, asset tag, operating system version, computer model, building, room, department, username, last IP, computer name, MAC address, computer ID, PO number, PO date epoch, warranty date epoch, managed status and extension attributes.
 
 ### Datapoints Collected for Mobile Devices Applications:
 ```xml
