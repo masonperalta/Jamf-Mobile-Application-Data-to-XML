@@ -1,4 +1,4 @@
-# Gather Mobile Application Data to XML
+# Jamf Mobile Application Data to XML
 
 
 ## Purpose
