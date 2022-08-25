@@ -8,7 +8,7 @@ The purpose of this script is to sync mobile device applications via the Jamf Cl
 ```xml
 <mobile_device_applications>
   <mobile_device_application>
-    <application_id>105</application_id>
+    <application_id>1</application_id>
     <application_name>My App</application_name>
     <bundle_id>com.my-app</bundle_id>
     <application_status>Managed</application_status>
