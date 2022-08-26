@@ -11,11 +11,11 @@ The purpose of this script is to sync mobile device applications via the Jamf Cl
     <application_id>1</application_id>
     <application_name>My App</application_name>
     <bundle_id>com.my-app</bundle_id>
-    <application_status>Managed</application_status>
     <devices>
       <device>
         <id>1</id>
-        <app_version>1.0</app_version>
+        <application_version>1.0</app_version>
+        <application_status>Managed</application_status>
       </device>
     </devices>
   </mobile_device_application>
