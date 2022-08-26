@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import requests
 import sys
@@ -9,6 +8,7 @@ import time
 import datetime
 import xml.etree.ElementTree as ET
 from lxml import etree
+from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -17,8 +17,14 @@ def init_vars():
     jss = os.environ.get("JSS")
     api_user = os.environ.get("JSSUSER")
     api_pw = os.environ.get("JSSPASS")
-    tmp_path = "/tmp/"
-    log_folder_path = os.path.expanduser("~/JamfAPISync")
+    server_type = os.environ.get("SERVERTYPE")
+    home = str(Path.home())
+    if server_type == "windows":
+        tmp_path = f"{home}\\JamfAPISync\\"
+        log_folder_path = f"{tmp_path}\\Logs\\"
+    else:
+        tmp_path = f"{home}/JamfAPISync/"
+        log_folder_path = f"{tmp_path}/Logs/"
     debug_mode_tf = True
     return jss, api_user, api_pw, tmp_path, log_folder_path, debug_mode_tf
 
@@ -29,8 +35,8 @@ def insert_into_xml(filename, application_name, mobile_device_identifier, mobile
     found = False
 
     for element in root.findall("mobile_device_application"):
-        # Check if title contains the word Python
-        if application_name in element.find("application_name").text:
+        # Check if bundle ID exists already in XML file
+        if mobile_device_identifier in element.find("bundle_id").text:
             found = True
             break
 
@@ -41,28 +47,47 @@ def insert_into_xml(filename, application_name, mobile_device_identifier, mobile
             device = ET.SubElement(devices_element, "device")
             did = ET.SubElement(device, "id")
             did.text = mobile_device_id
-            mdasv = ET.SubElement(device, "app_version")
+            mdasv = ET.SubElement(device, "application_version")
             mdasv.text = mobile_device_application_short_version
+            mdas = ET.SubElement(device, "application_status")
+            mdas.text = mobile_device_application_status
             tree = ET.ElementTree(root)
             tree.write(filename)
             break
     else:
-        # adding new application information
-        mda = ET.SubElement(root, "mobile_device_application")
-        an = ET.SubElement(mda, "application_name")
-        an.text = application_name
-        bid = ET.SubElement(mda, "bundle_id")
-        bid.text = mobile_device_identifier
-        mdas = ET.SubElement(mda, "application_status")
-        mdas.text = mobile_device_application_status
-        devices = ET.SubElement(mda, "devices")
-        device = ET.SubElement(devices, "device")
-        did = ET.SubElement(device, "id")
-        did.text = mobile_device_id
-        mdasv = ET.SubElement(device, "app_version")
-        mdasv.text = mobile_device_application_short_version
-        tree = ET.ElementTree(root)
-        tree.write(filename)
+        # use bundle ID from list created earlier to confirm app identity and assign correct app ID
+        index = -1
+        app_record_found = False
+        for app_bundle_id in app_bundle_ids:
+            index += 1
+            if app_bundle_id == mobile_device_identifier:
+                app_record_found = True
+                break
+
+        if app_record_found:
+            mobile_app_id = str(app_ids[index])
+            # adding new application information
+            mda = ET.SubElement(root, "mobile_device_application")
+            mdaid = ET.SubElement(mda, "application_id")
+            mdaid.text = mobile_app_id
+            an = ET.SubElement(mda, "application_name")
+            an.text = application_name
+            bid = ET.SubElement(mda, "bundle_id")
+            bid.text = mobile_device_identifier
+            devices = ET.SubElement(mda, "devices")
+            device = ET.SubElement(devices, "device")
+            did = ET.SubElement(device, "id")
+            did.text = mobile_device_id
+            mdasv = ET.SubElement(device, "application_version")
+            mdasv.text = mobile_device_application_short_version
+            mdas = ET.SubElement(device, "application_status")
+            mdas.text = mobile_device_application_status
+            tree = ET.ElementTree(root)
+            tree.write(filename)
+        else:
+            write_to_logfile(
+                f"INFO: App found in Mobile Device record but no Jamf object to reference. Not adding to XML: {application_name, mobile_device_identifier}",
+                now_formatted, "std")
 
 
 def generate_xml(filename):
@@ -79,8 +104,6 @@ def generate_xml(filename):
     b3.text = " "
     b4 = ET.SubElement(m1, "internal_app")
     b4.text = " "
-    b5 = ET.SubElement(m1, "application_status")
-    b5.text = " "
 
     m2 = ET.Element("devices")
     m1.append(m2)
@@ -88,8 +111,10 @@ def generate_xml(filename):
     m2.append(m3)
     c1 = ET.SubElement(m3, "id")
     c1.text = " "
-    c2 = ET.SubElement(m3, "app_version")
+    c2 = ET.SubElement(m3, "application_version")
     c2.text = " "
+    c3 = ET.SubElement(m3, "application_status")
+    c3.text = " "
 
     tree = ET.ElementTree(root)
 
@@ -253,6 +278,7 @@ def get_all_ids(device_type, filename):
                 should_keep_tabulating = False
 
         write_to_logfile(f"INFO: IDs retrieved [{all_ids_count} of {total_id_count}].....", now_formatted, "std")
+    all_ids_json_filepath.close()
     os.remove(tmp_path + filename)
     return all_ids
 
@@ -277,16 +303,16 @@ def parse_mobile_device_info():
         check_response_code(response, api_url)
         reply = response.text  # just the xml, to save to file
         # write XML to /tmp folder
-        print(reply, file=open(tmp_file, "w+"))
+        print(reply, file=open(tmp_file, "w+", encoding='utf-8'))
         # parse all computer info
         tree = ET.parse(tmp_file)
         root = tree.getroot()
 
         mobile_device_id = id
-        mobile_device_application_name = " "
-        mobile_device_application_short_version = " "
-        mobile_device_application_status = " "
-        mobile_device_identifier = " "
+        # mobile_device_application_name = " "
+        # mobile_device_application_short_version = " "
+        # mobile_device_application_status = " "
+        # mobile_device_identifier = " "
         for a in root.findall('.//application'):
             mobile_device_application_name = getattr(a.find('application_name'), 'text', None)
             if not mobile_device_application_name:
@@ -294,7 +320,7 @@ def parse_mobile_device_info():
                     f"ERROR: xml parse of mobile device ID {id} returned NONE for name. Assigning [NAME NOT FOUND]",
                     now_formatted, "std")
                 mobile_device_application_name = "NAME NOT FOUND"
-            mobile_device_application_name = mobile_device_application_name.replace("'", r"\'")
+            # mobile_device_application_name = mobile_device_application_name.replace("'", r"\'")
             mobile_device_identifier = getattr(a.find('identifier'), 'text', None)
             mobile_device_application_status = getattr(a.find('application_status'), 'text', None)
             mobile_device_application_short_version = getattr(a.find('application_short_version'), 'text', None)
@@ -306,10 +332,50 @@ def parse_mobile_device_info():
         os.remove(tmp_file)
 
 
+def gather_application_ids():
+    # gather all application IDs and assign as key pairs with application name
+    write_to_logfile(f"INFO: gathering all application IDs and names", now_formatted, "debug")
+    # make api call to retrieve inventory for each computer
+    # use subset/Applications to only return the list of applications by mobile device ID
+    api_url = f"{jss}/JSSResource/mobiledeviceapplications"
+    tmp_file = f"{tmp_path}allMobileDeviceApplications.json"
+    payload = {}
+    headers = {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + api_token
+    }
+
+    check_token_expiration_time()
+    response = requests.request("GET", api_url, headers=headers, data=payload)
+    # noinspection PyTypeChecker
+    check_response_code(response, api_url)
+    reply = response.text  # just the xml, to save to file
+    # write JSON to /tmp folder
+    print(reply, file=open(tmp_file, "w+"))
+    # parse all mobile application info
+    all_app_ids_json_filepath = open(tmp_file)
+    all_app_ids_json_data = json.load(all_app_ids_json_filepath)
+    app_ids = []
+    app_names = []
+    app_display_names = []
+    app_bundle_ids = []
+    index = 0
+    for element in all_app_ids_json_data['mobile_device_applications']:
+        app_ids.append(f"unknownID_{index}") if element["id"] is None else app_ids.append(element["id"])
+        # app_names.append(f"unknownName_{index}") if element["name"] is None else app_names.append(element["name"])
+        # app_display_names.append(f"unknownDisplayName_{index}") if element["display_name"] is None else app_display_names.append(element["display_name"])
+        app_bundle_ids.append(f"unknownBundleID_{index}") if element["bundle_id"] is None else app_bundle_ids.append(element["bundle_id"])
+        index += 1
+
+    all_app_ids_json_filepath.close()
+    os.remove(tmp_file)
+    return app_ids, app_bundle_ids
+
+
 def write_to_logfile(log_to_print, timestamp, debug_or_std):
     # create file if it doesn't exist. the "w+ option overwrites existing file content.
     if debug_or_std == "std":
-        print(log_to_print, file=open(log_folder_path + "/JamfAPISync-" + timestamp + ".log", "a+"))
+        print(log_to_print, file=open(log_folder_path + "/JamfAPISync-" + timestamp + ".log", "a+", encoding='utf-8'))
     elif debug_or_std == "debug" and debug_mode_tf:
         # only print debug logs if debug_mode_tf is true
         print(f"DEBUG: {log_to_print}", file=open(log_folder_path + "/JamfAPISync-" + timestamp + ".log", "a+"))
@@ -331,7 +397,43 @@ def now_date_time():
     return now_formatted
 
 
-def create_script_directory():
+def script_duration(start_or_stop):
+    # this function calculates script duration
+    day = 0; hour = 0; min = 0; sec = 0
+    global start_script_epoch
+
+    if start_or_stop == "start":
+        print("[SCRIPT START]")
+        start_script_epoch = int(time.time())  # converting to int for simplicity
+    else:
+        stop_script_epoch = int(time.time())
+        script_duration_in_seconds = stop_script_epoch - start_script_epoch
+
+        if script_duration_in_seconds > 59:
+            sec = int(script_duration_in_seconds % 60)
+            script_duration_in_seconds = int(script_duration_in_seconds / 60)
+
+            if script_duration_in_seconds > 59:
+                min = int(script_duration_in_seconds % 60)
+                script_duration_in_seconds = script_duration_in_seconds / 60
+
+                if script_duration_in_seconds > 23:
+                    hour = int(script_duration_in_seconds % 24)
+                    day = int(script_duration_in_seconds / 24)
+                else:
+                    hour = int(script_duration_in_seconds)
+            else:
+                min = int(script_duration_in_seconds)
+        else:
+            sec = int(script_duration_in_seconds)
+
+        write_to_logfile(f"\n\n\n---------------\nSUCCESS: script completed.  XML file can be found in {tmp_path}", now_formatted, "std")
+        write_to_logfile(f"SCRIPT DURATION: {day} day(s) {hour} hour(s) {min} minute(s) {sec} second(s)", now_formatted,
+                         "std")
+        print("[SCRIPT COMPLETE!]")
+
+
+def create_script_directory(days_ago_to_delete_logs):
     # Check whether the specified path exists or not
     path_exists = os.path.exists(log_folder_path)
 
@@ -342,23 +444,26 @@ def create_script_directory():
     else:
         write_to_logfile(f"INFO: the directory {log_folder_path} already exists", now_formatted, "debug")
 
-        # x_days_ago = time.time() - (days_ago_to_delete_logs * 86400)
-        # write_to_logfile(f"DELETE: deleting log files older than {days_ago_to_delete_logs} days", now_formatted, "debug")
+        x_days_ago = time.time() - (days_ago_to_delete_logs * 86400)
+        write_to_logfile(f"DELETE: deleting log files older than {days_ago_to_delete_logs} days", now_formatted, "debug")
 
         for i in os.listdir(log_folder_path):
             path = os.path.join(log_folder_path, i)
 
-            # if os.stat(path).st_mtime <= x_days_ago:
-                # if os.path.isfile(path):
-                    # os.remove(path)
+            if os.stat(path).st_mtime <= x_days_ago:
+                if os.path.isfile(path):
+                    os.remove(path)
+                    write_to_logfile(f"DELETE: [{path}]", now_formatted, "std")
 
 
 if __name__ == "__main__":
-    print("[SCRIPT START]")
+    script_duration("start")
     now_formatted = now_date_time()
     jss, api_user, api_pw, tmp_path, log_folder_path, debug_mode_tf = init_vars()
-    create_script_directory()
+    create_script_directory(14)
     api_token = generate_auth_token()
+    # app bundle id is gathered in individual mobile device record.  Record details in XML we're creating are confirmed using app_bundle_ids in order to match up ID with app name
+    app_ids, app_bundle_ids = gather_application_ids()
     all_ids = get_all_ids("mobiledevices", "all_mobile_devices.json")
     # create blank XML structure
     generate_xml(tmp_path + f"mobile_applications_{now_formatted}.xml")
@@ -369,11 +474,4 @@ if __name__ == "__main__":
         file.write(pretty_xml)
 
     remove_empty_xml_tags(tmp_path + f"mobile_applications_{now_formatted}.xml")
-    print("[SCRIPT FINISH]")
-
-
-
-
-
-
-
+    script_duration("stop")
