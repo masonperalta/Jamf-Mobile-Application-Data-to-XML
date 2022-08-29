@@ -21,3 +21,11 @@ The purpose of this script is to sync mobile device applications via the Jamf Cl
   </mobile_device_application>
 </mobile_device_applications>
 ```
+
+Configure the .ENV file as follows:
+```
+JSSUSER = "api_user"
+JSSPASS = "api_user_pw"
+JSS = "https://myInstance.jamfcloud.com"
+SERVERTYPE = "windows"
+```
