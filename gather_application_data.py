@@ -66,6 +66,9 @@ def insert_into_xml(filename, application_name, mobile_device_identifier, mobile
 
         if app_record_found:
             mobile_app_id = str(app_ids[index])
+            if application_name == "NAME NOT FOUND":
+                # name for this app not found in device record, defaulting to primary app list
+                application_name = str(app_names[index])
             # adding new application information
             mda = ET.SubElement(root, "mobile_device_application")
             mdaid = ET.SubElement(mda, "application_id")
@@ -362,14 +365,14 @@ def gather_application_ids():
     index = 0
     for element in all_app_ids_json_data['mobile_device_applications']:
         app_ids.append(f"unknownID_{index}") if element["id"] is None else app_ids.append(element["id"])
-        # app_names.append(f"unknownName_{index}") if element["name"] is None else app_names.append(element["name"])
+        app_names.append(f"unknownName_{index}") if element["name"] is None else app_names.append(element["name"])
         # app_display_names.append(f"unknownDisplayName_{index}") if element["display_name"] is None else app_display_names.append(element["display_name"])
         app_bundle_ids.append(f"unknownBundleID_{index}") if element["bundle_id"] is None else app_bundle_ids.append(element["bundle_id"])
         index += 1
 
     all_app_ids_json_filepath.close()
     os.remove(tmp_file)
-    return app_ids, app_bundle_ids
+    return app_ids, app_names, app_bundle_ids
 
 
 def write_to_logfile(log_to_print, timestamp, debug_or_std):
@@ -463,7 +466,7 @@ if __name__ == "__main__":
     create_script_directory(14)
     api_token = generate_auth_token()
     # app bundle id is gathered in individual mobile device record.  Record details in XML we're creating are confirmed using app_bundle_ids in order to match up ID with app name
-    app_ids, app_bundle_ids = gather_application_ids()
+    app_ids, app_names, app_bundle_ids = gather_application_ids()
     all_ids = get_all_ids("mobiledevices", "all_mobile_devices.json")
     # create blank XML structure
     generate_xml(tmp_path + f"mobile_applications_{now_formatted}.xml")
