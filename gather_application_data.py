@@ -226,7 +226,7 @@ def get_all_ids(device_type, filename):
     check_response_code(response, api_url)
     reply = response.text  # just the json, to save to file
     # write JSON to /tmp/jss_temp.....
-    print(reply, file=open(tmp_path + filename, "w+"))  # writes output to /tmp
+    print(reply, file=open(tmp_path + filename, "w+", encoding='utf-8'))  # writes output to /tmp
 
     all_ids_json_filepath = open(tmp_path + filename)
     all_ids_json_data = json.load(all_ids_json_filepath)
@@ -260,7 +260,7 @@ def get_all_ids(device_type, filename):
         check_response_code(response, api_url)
         reply = response.text
         # write JSON to /tmp/jss_temp.....
-        print(reply, file=open(tmp_path + filename, "w+"))
+        print(reply, file=open(tmp_path + filename, "w+", encoding='utf-8'))
 
         all_ids_json_filepath = open(tmp_path + filename)
         all_ids_json_data = json.load(all_ids_json_filepath)
@@ -351,7 +351,7 @@ def gather_application_ids():
     check_response_code(response, api_url)
     reply = response.text  # just the xml, to save to file
     # write JSON to /tmp folder
-    print(reply, file=open(tmp_file, "w+"))
+    print(reply, file=open(tmp_file, "w+", encoding='utf-8'))
     # parse all mobile application info
     all_app_ids_json_filepath = open(tmp_file)
     all_app_ids_json_data = json.load(all_app_ids_json_filepath)
@@ -378,7 +378,7 @@ def write_to_logfile(log_to_print, timestamp, debug_or_std):
         print(log_to_print, file=open(log_folder_path + "/JamfAPISync-" + timestamp + ".log", "a+", encoding='utf-8'))
     elif debug_or_std == "debug" and debug_mode_tf:
         # only print debug logs if debug_mode_tf is true
-        print(f"DEBUG: {log_to_print}", file=open(log_folder_path + "/JamfAPISync-" + timestamp + ".log", "a+"))
+        print(f"DEBUG: {log_to_print}", file=open(log_folder_path + "/JamfAPISync-" + timestamp + ".log", "a+", encoding='utf-8'))
 
 
 def now_date_time():
