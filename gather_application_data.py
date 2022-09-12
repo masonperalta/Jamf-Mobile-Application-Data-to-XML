@@ -320,7 +320,7 @@ def parse_mobile_device_info():
             mobile_device_application_name = getattr(a.find('application_name'), 'text', None)
             if not mobile_device_application_name:
                 write_to_logfile(
-                    f"ERROR: xml parse of mobile device ID {id} returned NONE for name. Assigning [NAME NOT FOUND]",
+                    f"ERROR: parse of mobile device ID {id} returned NONE for app name. Attempting to match via bundle ID and if unsuccessful use [NAME NOT FOUND]",
                     now_formatted, "std")
                 mobile_device_application_name = "NAME NOT FOUND"
             # mobile_device_application_name = mobile_device_application_name.replace("'", r"\'")
