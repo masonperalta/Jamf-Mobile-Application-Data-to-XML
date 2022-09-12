@@ -14,6 +14,7 @@ load_dotenv()
 
 
 def init_vars():
+    # initialize the environmental variables for this session
     jss = os.environ.get("JSS")
     api_user = os.environ.get("JSSUSER")
     api_pw = os.environ.get("JSSPASS")
@@ -29,7 +30,9 @@ def init_vars():
     return jss, api_user, api_pw, tmp_path, log_folder_path, debug_mode_tf
 
 
-def insert_into_xml(filename, application_name, mobile_device_identifier, mobile_device_application_status, mobile_device_id, mobile_device_application_short_version):
+def insert_into_xml(filename, application_name, mobile_device_identifier,
+                    mobile_device_application_status, mobile_device_id, mobile_device_application_short_version):
+    """ Takes the parsed app and device info and inserts into output XML"""
     tree = ET.ElementTree(file=filename)
     root = tree.getroot()
     found = False
@@ -135,7 +138,7 @@ def pretty(filename):
 
 def remove_empty_xml_tags(filename):
     # removes the empty tags in XML file we used for template structure
-    with open(filename, 'r+') as fp:
+    with open(filename, 'r+', encoding='utf-8') as fp:
         # read and store all lines into list
         lines = fp.readlines()
         # move file pointer to the beginning of a file
@@ -168,8 +171,7 @@ def generate_auth_token():
     }
 
     response = requests.request("POST", jss_token_url, headers=headers, data=payload)
-    # noinspection PyTypeChecker
-    check_response_code(response, jss_token_url)
+    check_response_code(str(response), jss_token_url)
     # parse the json from the request
     response_data_dict = json.loads(response.text)
     # assign variable as global to be used in other functions
@@ -181,8 +183,8 @@ def generate_auth_token():
 
 
 def check_token_expiration_time():
-    # api_token_valid_start_epoch is created globally when token is generated and api_token_valid_check_epoch is created locally to generate
-    # api_token_valid_duration_seconds which determines how long the token has been active
+    """api_token_valid_start_epoch is created globally when token is generated and api_token_valid_check_epoch is created locally to generate
+    api_token_valid_duration_seconds which determines how long the token has been active"""
     api_token_valid_check_epoch = int(time.time())
     api_token_valid_duration_seconds = api_token_valid_check_epoch - api_token_valid_start_epoch
     # Renew token if necessary
@@ -225,13 +227,12 @@ def get_all_ids(device_type, filename):
 
     check_token_expiration_time()
     response = requests.request("GET", api_url, headers=headers, data=payload)
-    # noinspection PyTypeChecker
-    check_response_code(response, api_url)
+    check_response_code(str(response), api_url)
     reply = response.text  # just the json, to save to file
     # write JSON to /tmp/jss_temp.....
     print(reply, file=open(tmp_path + filename, "w+", encoding='utf-8'))  # writes output to /tmp
 
-    all_ids_json_filepath = open(tmp_path + filename)
+    all_ids_json_filepath = open(tmp_path + filename, encoding='utf-8')
     all_ids_json_data = json.load(all_ids_json_filepath)
 
     total_id_count = all_ids_json_data['totalCount']
@@ -259,13 +260,12 @@ def get_all_ids(device_type, filename):
         api_url = refresh_api_url()
         check_token_expiration_time()
         response = requests.request("GET", api_url, headers=headers, data=payload)
-        # noinspection PyTypeChecker
-        check_response_code(response, api_url)
+        check_response_code(str(response), api_url)
         reply = response.text
         # write JSON to /tmp/jss_temp.....
         print(reply, file=open(tmp_path + filename, "w+", encoding='utf-8'))
 
-        all_ids_json_filepath = open(tmp_path + filename)
+        all_ids_json_filepath = open(tmp_path + filename, encoding='utf-8')
         all_ids_json_data = json.load(all_ids_json_filepath)
 
         id_index = 0
@@ -302,8 +302,7 @@ def parse_mobile_device_info():
 
         check_token_expiration_time()
         response = requests.request("GET", api_url, headers=headers, data=payload)
-        # noinspection PyTypeChecker
-        check_response_code(response, api_url)
+        check_response_code(str(response), api_url)
         reply = response.text  # just the xml, to save to file
         # write XML to /tmp folder
         print(reply, file=open(tmp_file, "w+", encoding='utf-8'))
@@ -350,13 +349,12 @@ def gather_application_ids():
 
     check_token_expiration_time()
     response = requests.request("GET", api_url, headers=headers, data=payload)
-    # noinspection PyTypeChecker
-    check_response_code(response, api_url)
+    check_response_code(str(response), api_url)
     reply = response.text  # just the xml, to save to file
     # write JSON to /tmp folder
     print(reply, file=open(tmp_file, "w+", encoding='utf-8'))
     # parse all mobile application info
-    all_app_ids_json_filepath = open(tmp_file)
+    all_app_ids_json_filepath = open(tmp_file, encoding='utf-8')
     all_app_ids_json_data = json.load(all_app_ids_json_filepath)
     app_ids = []
     app_names = []
@@ -402,7 +400,7 @@ def now_date_time():
 
 def script_duration(start_or_stop):
     # this function calculates script duration
-    day = 0; hour = 0; min = 0; sec = 0
+    days = 0; hours = 0; mins = 0; secs = 0
     global start_script_epoch
 
     if start_or_stop == "start":
@@ -413,25 +411,25 @@ def script_duration(start_or_stop):
         script_duration_in_seconds = stop_script_epoch - start_script_epoch
 
         if script_duration_in_seconds > 59:
-            sec = int(script_duration_in_seconds % 60)
+            secs = int(script_duration_in_seconds % 60)
             script_duration_in_seconds = int(script_duration_in_seconds / 60)
 
             if script_duration_in_seconds > 59:
-                min = int(script_duration_in_seconds % 60)
+                mins = int(script_duration_in_seconds % 60)
                 script_duration_in_seconds = script_duration_in_seconds / 60
 
                 if script_duration_in_seconds > 23:
-                    hour = int(script_duration_in_seconds % 24)
-                    day = int(script_duration_in_seconds / 24)
+                    hours = int(script_duration_in_seconds % 24)
+                    days = int(script_duration_in_seconds / 24)
                 else:
-                    hour = int(script_duration_in_seconds)
+                    hours = int(script_duration_in_seconds)
             else:
-                min = int(script_duration_in_seconds)
+                mins = int(script_duration_in_seconds)
         else:
-            sec = int(script_duration_in_seconds)
+            secs = int(script_duration_in_seconds)
 
         write_to_logfile(f"\n\n\n---------------\nSUCCESS: script completed.  XML file can be found in {tmp_path}", now_formatted, "std")
-        write_to_logfile(f"SCRIPT DURATION: {day} day(s) {hour} hour(s) {min} minute(s) {sec} second(s)", now_formatted,
+        write_to_logfile(f"SCRIPT DURATION: {days} day(s) {hours} hour(s) {mins} minute(s) {secs} second(s)", now_formatted,
                          "std")
         print("[SCRIPT COMPLETE!]")
 
@@ -453,10 +451,9 @@ def create_script_directory(days_ago_to_delete_logs):
         for i in os.listdir(log_folder_path):
             path = os.path.join(log_folder_path, i)
 
-            if os.stat(path).st_mtime <= x_days_ago:
-                if os.path.isfile(path):
-                    os.remove(path)
-                    write_to_logfile(f"DELETE: [{path}]", now_formatted, "std")
+            if os.stat(path).st_mtime <= x_days_ago and os.path.isfile(path):
+                os.remove(path)
+                write_to_logfile(f"DELETE: [{path}]", now_formatted, "std")
 
 
 if __name__ == "__main__":
@@ -465,7 +462,9 @@ if __name__ == "__main__":
     jss, api_user, api_pw, tmp_path, log_folder_path, debug_mode_tf = init_vars()
     create_script_directory(14)
     api_token = generate_auth_token()
-    # app bundle id is gathered in individual mobile device record.  Record details in XML we're creating are confirmed using app_bundle_ids in order to match up ID with app name
+    """app bundle id is gathered in individual mobile device record.  
+    Record details in XML we're creating are confirmed using app_bundle_ids 
+    in order to match up ID with app name"""
     app_ids, app_names, app_bundle_ids = gather_application_ids()
     all_ids = get_all_ids("mobiledevices", "all_mobile_devices.json")
     # create blank XML structure
@@ -473,7 +472,7 @@ if __name__ == "__main__":
     parse_mobile_device_info()
     # pretty the XML by copying, cleaning and pasting into document
     pretty_xml = pretty(tmp_path + f"mobile_applications_{now_formatted}.xml")
-    with open(tmp_path + f"mobile_applications_{now_formatted}.xml", "w") as file:
+    with open(tmp_path + f"mobile_applications_{now_formatted}.xml", "w", encoding='utf-8') as file:
         file.write(pretty_xml)
 
     remove_empty_xml_tags(tmp_path + f"mobile_applications_{now_formatted}.xml")
