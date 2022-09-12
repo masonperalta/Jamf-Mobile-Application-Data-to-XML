@@ -90,10 +90,11 @@ def insert_into_xml(filename, application_name, mobile_device_identifier,
             mdas.text = mobile_device_application_status
             tree = ET.ElementTree(root)
             tree.write(filename)
-        else:
-            write_to_logfile(
-                f"INFO: App found in Mobile Device record but no Jamf object to reference. Not adding to XML: {application_name, mobile_device_identifier}",
-                now_formatted, "std")
+        # below can be uncommented out to log applications that are user-installed on devices but not being pushed via Jamf
+        # else:
+            # write_to_logfile(
+            #    f"INFO: App found in Mobile Device record but no Jamf object to reference. Not adding to XML: {application_name, mobile_device_identifier}",
+            #    now_formatted, "std")
 
 
 def generate_xml(filename):
