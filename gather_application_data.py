@@ -158,6 +158,7 @@ def remove_empty_xml_tags(filename):
 def generate_auth_token():
     # generate api token
     global api_token_valid_start_epoch
+    global api_token
 
     credentials = api_user + ":" + api_pw
     credentials_bytes = credentials.encode('ascii')
@@ -209,7 +210,7 @@ def check_response_code(response_code: str, api_call: str):
 
 
 def get_all_ids(device_type, filename):
-    page_size = 100
+    page_size = 1000
     page = 0
 
     def refresh_api_url():
